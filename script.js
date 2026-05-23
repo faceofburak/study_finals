@@ -212,6 +212,12 @@ function renderSubjectLegend() {
 ══════════════════════════════════════ */
 function initSplash() {
   loadLocal();
+  // Clone nameInput to strip any old keydown listeners from previous sessions
+  const oldInput = $('#nameInput');
+  if (oldInput) {
+    const newInput = oldInput.cloneNode(true);
+    oldInput.parentNode.replaceChild(newInput, oldInput);
+  }
   const users = getKnownUsers();
   const listEl = $('#userList');
   listEl.innerHTML = '';
@@ -232,9 +238,14 @@ function initSplash() {
     if (!name) { showToast('Please enter your name', 'error'); return; }
     setCurrentUser(name);
   };
+  // Use once:true so the listener auto-removes itself after first use
+  // Also guard: only fire when splash is actually visible
   $('#nameInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') $('#enterBtn').click();
-  });
+    if (e.key === 'Enter' && !$('#splash').classList.contains('hidden')) {
+      e.preventDefault();
+      $('#enterBtn').click();
+    }
+  }, { once: true });
 }
 
 /* ══════════════════════════════════════
@@ -561,12 +572,21 @@ function openTaskModal(taskId = null, prefillDate = null) {
   }
 
   modal.classList.remove('hidden');
+  modal.removeEventListener('keydown', preventModalSubmit);
+  modal.addEventListener('keydown', preventModalSubmit);
   setTimeout(() => $('#taskTitle').focus(), 50);
 }
 
 function closeTaskModal() {
   $('#taskModal').classList.add('hidden');
   state.editingTaskId = null;
+}
+
+function preventModalSubmit(e) {
+  if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+    e.preventDefault();
+    saveTask();
+  }
 }
 
 function saveTask() {
@@ -1112,9 +1132,9 @@ function bindAppEvents() {
   $('#fab').onclick = () => openTaskModal(null, today());
 
   // Task modal
-  $('#closeTaskModal').onclick = closeTaskModal;
-  $('#saveTaskBtn').onclick = saveTask;
-  $('#deleteTaskBtn').onclick = () => deleteTask(state.editingTaskId);
+  $('#closeTaskModal').onclick = (e) => { e.preventDefault(); closeTaskModal(); };
+  $('#saveTaskBtn').onclick = (e) => { e.preventDefault(); saveTask(); };
+  $('#deleteTaskBtn').onclick = (e) => { e.preventDefault(); deleteTask(state.editingTaskId); };
   $('#taskModal').addEventListener('click', e => { if (e.target === $('#taskModal')) closeTaskModal(); });
 
   // Generate view
@@ -1241,6 +1261,13 @@ function bindAppEvents() {
     }
     if (e.key === 'n' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault(); openTaskModal();
+    }
+    // Prevent Enter from bubbling to splash screen while app is open
+    if (e.key === 'Enter' && !$('#app').classList.contains('hidden')) {
+      const modal = $('#taskModal');
+      if (!modal.classList.contains('hidden') && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
     }
   });
 }
