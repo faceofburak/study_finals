@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>PlanFlow — Intelligent Study Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ═══════════════════ SPLASH / USER SELECT ═══════════════════ -->
+<div id="splash" class="splash">
+  <div class="splash-bg"></div>
+  <div class="splash-content">
+    <div class="splash-logo">
+      <span class="logo-mark">PF</span>
+      <span class="logo-text">PlanFlow</span>
+    </div>
+    <p class="splash-tagline">Intelligent scheduling for ambitious minds</p>
+
+    <div class="splash-card">
+      <h2>Who are you?</h2>
+      <input type="text" id="nameInput" placeholder="Enter your name…" autocomplete="off" spellcheck="false" />
+      <div id="userList" class="user-list"></div>
+      <button id="enterBtn" class="btn-primary">Enter My Planner →</button>
+    </div>
+
+    <p class="splash-note">No account needed. Your planner lives in your browser & optionally syncs to GitHub.</p>
+  </div>
+</div>
+
+<!-- ═══════════════════ MAIN APP ═══════════════════ -->
+<div id="app" class="app hidden">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="menuBtn" class="icon-btn" aria-label="Menu">☰</button>
+      <div class="topbar-logo">PF</div>
+    </div>
+    <div class="topbar-center">
+      <div id="progressBar" class="progress-pill">
+        <div class="progress-fill" id="progressFill"></div>
+        <span id="progressLabel" class="progress-label">0% today</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="currentUserBadge" class="user-badge"></span>
+      <button id="syncBtn" class="icon-btn" title="Sync to GitHub">⟳</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">PlanFlow</span>
+        <button id="closeSidebar" class="icon-btn">✕</button>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" class="nav-link active" data-view="planner">📅 Planner</a></li>
+        <li><a href="#" class="nav-link" data-view="generate">✨ Generate Schedule</a></li>
+        <li><a href="#" class="nav-link" data-view="analytics">📊 Analytics</a></li>
+        <li><a href="#" class="nav-link" data-view="settings">⚙️ Settings</a></li>
+      </ul>
+      <div class="sidebar-section-label">SUBJECTS</div>
+      <div id="subjectLegend" class="subject-legend"></div>
+      <div class="sidebar-footer">
+        <button id="exportBtn" class="btn-ghost">↓ Export JSON</button>
+        <button id="importBtn" class="btn-ghost">↑ Import JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" />
+        <button id="switchUserBtn" class="btn-ghost">⇄ Switch User</button>
+      </div>
+    </div>
+  </nav>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+  <!-- ══ VIEW: PLANNER ══ -->
+  <main id="viewPlanner" class="view active">
+    <div class="view-header">
+      <h1 id="plannerTitle">My Planner</h1>
+      <div class="view-header-actions">
+        <button id="todayBtn" class="btn-ghost-sm">Today</button>
+        <button id="addTaskBtn" class="btn-ghost-sm">+ Add Task</button>
+      </div>
+    </div>
+
+    <!-- Overload Warning -->
+    <div id="overloadWarning" class="overload-warning hidden">
+      ⚠️ Some days are heavily loaded — consider redistributing tasks.
+    </div>
+
+    <!-- Day Cards -->
+    <div id="dayCardsContainer" class="day-cards"></div>
+
+    <!-- Floating Add Button -->
+    <button id="fab" class="fab" aria-label="Add task">+</button>
+  </main>
+
+  <!-- ══ VIEW: GENERATE ══ -->
+  <main id="viewGenerate" class="view hidden">
+    <div class="view-header">
+      <h1>Generate Schedule</h1>
+      <p class="view-subtitle">Describe your exams, goals & preferences. The engine does the rest.</p>
+    </div>
+
+    <!-- Prompt Examples -->
+    <div class="examples-panel">
+      <button class="examples-toggle" id="examplesToggle">
+        <span>💡 Prompt Examples</span>
+        <span class="toggle-arrow">▾</span>
+      </button>
+      <div id="examplesBody" class="examples-body hidden">
+        <div class="example-card">
+          <div class="example-label">Exam Season</div>
+          <p class="example-text" id="ex1">Mech306 final June 5 chapters 0-24 CNC coding.
+Heat Transfer June 9 chapters 3 5 6 7 8 9 11.
+Control June 10 chapters 5-8.
+No studying May 30-June 1.
+Morning run every day.
+Leave lots of free time.</p>
+          <button class="copy-btn" data-target="ex1">Copy</button>
+        </div>
+        <div class="example-card">
+          <div class="example-label">Afternoon Studier</div>
+          <p class="example-text" id="ex2">Control systems final June 10 chapters 5-8.
+Study mostly afternoons.
+Gym every morning.
+No studying after 9pm.
+Light weekends.</p>
+          <button class="copy-btn" data-target="ex2">Copy</button>
+        </div>
+        <div class="example-card">
+          <div class="example-label">Interview Prep</div>
+          <p class="example-text" id="ex3">Prepare for software engineering interview June 15.
+DSA practice every weekday.
+System design twice a week.
+Keep Sundays mostly free.
+Heavy workload.</p>
+          <button class="copy-btn" data-target="ex3">Copy</button>
+        </div>
+        <div class="example-card">
+          <div class="example-label">Balanced Semester</div>
+          <p class="example-text" id="ex4">Physics exam July 2 chapters 1-8.
+Math exam July 5 chapters 1-12.
+No studying weekends.
+30 min gym every day.
+Revision week starting June 25.
+Light workload.</p>
+          <button class="copy-btn" data-target="ex4">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyword Chips -->
+    <div class="chips-row" id="keywordChips">
+      <span class="chip-label">Quick add:</span>
+      <button class="chip" data-text="No studying weekends">No studying weekends</button>
+      <button class="chip" data-text="Gym every morning">Gym every morning</button>
+      <button class="chip" data-text="Heavy workload">Heavy workload</button>
+      <button class="chip" data-text="Light schedule">Light schedule</button>
+      <button class="chip" data-text="Revision week">Revision week</button>
+      <button class="chip" data-text="No studying after 9pm">No studying after 9pm</button>
+      <button class="chip" data-text="Leave lots of free time">Leave lots of free time</button>
+      <button class="chip" data-text="Exam prep">Exam prep</button>
+    </div>
+
+    <!-- Prompt Textarea -->
+    <div class="prompt-box">
+      <textarea id="promptInput" class="prompt-textarea" rows="8"
+        placeholder="Describe your plan...
+
+Examples:
+• Mech306 final June 5 chapters 0-24
+• No studying May 30-June 1
+• Morning run every day
+• Leave lots of free time
+• Study mostly afternoons
+• Light weekends"></textarea>
+      <div class="prompt-tips">
+        <span>💡 Tips:</span>
+        <span>Include exam names + dates + chapters</span>
+        <span>•</span>
+        <span>Mention blocked days</span>
+        <span>•</span>
+        <span>Add workout/routine preferences</span>
+      </div>
+    </div>
+
+    <!-- Start Date -->
+    <div class="field-row">
+      <label for="startDateInput">Schedule from:</label>
+      <input type="date" id="startDateInput" class="date-input" />
+      <label for="endDateInput">to:</label>
+      <input type="date" id="endDateInput" class="date-input" />
+    </div>
+
+    <button id="generateBtn" class="btn-primary generate-btn">
+      <span id="generateBtnText">✨ Generate My Schedule</span>
+    </button>
+
+    <!-- Preview -->
+    <div id="generatePreview" class="generate-preview hidden"></div>
+
+    <div class="generate-actions hidden" id="generateActions">
+      <button id="acceptScheduleBtn" class="btn-primary">✓ Accept & Save to Planner</button>
+      <button id="discardScheduleBtn" class="btn-ghost">✗ Discard</button>
+    </div>
+  </main>
+
+  <!-- ══ VIEW: ANALYTICS ══ -->
+  <main id="viewAnalytics" class="view hidden">
+    <div class="view-header">
+      <h1>Analytics</h1>
+    </div>
+    <div class="analytics-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-value" id="statStreak">0</div>
+        <div class="stat-label">Day Streak</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="statCompletion">0%</div>
+        <div class="stat-label">Overall Completion</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-value" id="statStudyHours">0h</div>
+        <div class="stat-label">Study Hours Logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-value" id="statScore">0</div>
+        <div class="stat-label">Productivity Score</div>
+      </div>
+    </div>
+
+    <div class="analytics-section">
+      <h3>Weekly Overview</h3>
+      <div id="weeklyChart" class="weekly-chart"></div>
+    </div>
+
+    <div class="analytics-section">
+      <h3>Subject Progress</h3>
+      <div id="subjectProgress" class="subject-progress-list"></div>
+    </div>
+  </main>
+
+  <!-- ══ VIEW: SETTINGS ══ -->
+  <main id="viewSettings" class="view hidden">
+    <div class="view-header">
+      <h1>Settings</h1>
+    </div>
+    <div class="settings-group">
+      <h3>GitHub Sync</h3>
+      <p class="settings-desc">Store your planner data in a GitHub repository for cross-device access.</p>
+      <div class="field-stack">
+        <label>GitHub Token</label>
+        <input type="password" id="ghToken" class="settings-input" placeholder="ghp_xxxxxxxxxxxx" />
+        <label>Repository Owner</label>
+        <input type="text" id="ghOwner" class="settings-input" placeholder="your-username" />
+        <label>Repository Name</label>
+        <input type="text" id="ghRepo" class="settings-input" placeholder="my-planner-data" />
+      </div>
+      <button id="saveGhSettings" class="btn-primary">Save & Test Connection</button>
+      <div id="ghStatus" class="gh-status"></div>
+    </div>
+    <div class="settings-group">
+      <h3>Preferences</h3>
+      <div class="field-stack">
+        <label>Default study session length</label>
+        <select id="sessionLength" class="settings-input">
+          <option value="45">45 minutes</option>
+          <option value="60" selected>60 minutes</option>
+          <option value="90">90 minutes</option>
+          <option value="120">2 hours</option>
+        </select>
+        <label>Daily study hour limit</label>
+        <select id="dailyLimit" class="settings-input">
+          <option value="4">4 hours</option>
+          <option value="6" selected>6 hours</option>
+          <option value="8">8 hours</option>
+          <option value="10">10 hours</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-group danger-zone">
+      <h3>Data</h3>
+      <button id="clearDataBtn" class="btn-danger">Clear All My Data</button>
+    </div>
+  </main>
+
+</div>
+
+<!-- ═══════════════════ MODALS ═══════════════════ -->
+<!-- Task Modal -->
+<div id="taskModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="taskModalTitle">Add Task</h3>
+      <button class="modal-close" id="closeTaskModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-stack">
+        <label>Title</label>
+        <input type="text" id="taskTitle" class="settings-input" placeholder="Task title…" />
+        <label>Date</label>
+        <input type="date" id="taskDate" class="settings-input" />
+        <label>Time</label>
+        <input type="time" id="taskTime" class="settings-input" />
+        <label>Duration (minutes)</label>
+        <input type="number" id="taskDuration" class="settings-input" value="60" min="5" step="5" />
+        <label>Subject / Category</label>
+        <input type="text" id="taskSubject" class="settings-input" placeholder="e.g. Math, Gym, Free Time" />
+        <label>Priority</label>
+        <select id="taskPriority" class="settings-input">
+          <option value="high">🔴 High</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+        <label>Notes</label>
+        <textarea id="taskNotes" class="settings-input" rows="2" placeholder="Optional notes…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="deleteTaskBtn" class="btn-danger hidden">Delete</button>
+      <button id="saveTaskBtn" class="btn-primary">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal-card modal-small">
+    <div class="modal-body">
+      <p id="confirmMessage">Are you sure?</p>
+    </div>
+    <div class="modal-footer">
+      <button id="confirmCancel" class="btn-ghost">Cancel</button>
+      <button id="confirmOk" class="btn-danger">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
